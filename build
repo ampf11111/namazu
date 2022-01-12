@@ -1,0 +1,54 @@
+#!/bin/bash
+set -e # exit on an error
+# set -x
+
+function INFO(){
+    echo -e "\e[104m\e[97m[INFO]\e[49m\e[39m $@"
+}
+
+########## Set up ##########
+cd $(dirname $0)
+[ -z $GOPATH ] && (echo "GOPATH is not set"; exit 1)
+export GOBIN=$GOPATH/bin
+export PATH=$GOBIN:$PATH
+
+########## ProtocolBuffers ##########
+INFO "Installing protoc to $GOBIN"
+go get github.com/golang/protobuf/proto
+go get github.com/golang/protobuf/protoc-gen-go
+INFO "Generating PB files (FIXME: skipped...)"
+# protoc --go_out=nmz/util/pb -Imisc/inspector misc/inspector/inspector_message.proto
+
+########## Go ##########
+INFO "Building nmz"
+go get -t github.com/ampf11111/namazu/nmz
+go build -o bin/nmz github.com/ampf11111/namazu/nmz
+
+INFO "Building nmz.static"
+go build --ldflags '-extldflags "-static"' -tags static -o bin/nmz.static github.com/ampf11111/namazu/nmz
+file bin/nmz.static | grep "statically linked" > /dev/null
+
+EXAMPLES="example/template/mypolicy.go example/yarn/4301-reproduce/mypolicy.go"
+for f in $EXAMPLES; do
+    INFO "Building ${f}"
+    (
+	cd $(dirname $f)
+	go build -o $(basename -s .go $f) $(basename $f)
+    )
+done
+
+########## Python ##########
+#INFO "Checking whether pynmz deps are installed"
+#INFO "Running \`autopep8 -r --diff\` for pynmz"
+#autopep8 -r --diff misc/pynmz
+#INFO "Testing pynmz"
+
+########## Java ##########
+INFO "Building Java Inspector (bin/nmz-inspector.jar)"
+( cd misc/inspector/java/base; mvn package > /dev/null ) && cp -f misc/inspector/java/base/target/nmz-inspector.jar bin
+
+INFO "Building Java Analyzer (bin/nmz-analyzer.jar)"
+( cd misc/analyzer/java/base; mvn package > /dev/null ) && cp -f misc/analyzer/java/base/target/nmz-analyzer.jar bin
+
+########## C ##########
+#INFO "Building C Inspector" #FIXME: still broken?

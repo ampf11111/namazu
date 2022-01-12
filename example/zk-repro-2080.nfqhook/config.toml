@@ -1,0 +1,12 @@
+init = "init.sh"
+run = "run.sh"
+validate = "validate.sh"
+clean = "clean.sh"
+restPort = 10080
+
+#storageType = "mongodb"
+
+explorePolicy = "dumb"
+
+[explorePolicyParam]
+  interval = "80ms"
